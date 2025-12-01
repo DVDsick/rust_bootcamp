@@ -59,7 +59,7 @@ fn modular_pow(mut base: u64, mut exp: u64, modulus: u64) -> u64 {
         return 0;
     }
     let mut result = 1u128;
-    base = base % modulus;
+    base %= modulus;
     let mut base_128 = base as u128;
     let modulus_128 = modulus as u128;
 
@@ -212,7 +212,7 @@ fn run_server(port: u16) -> io::Result<()> {
             decipher.next_byte();
         }
         let decrypted = decipher.decrypt(&encrypted);
-        
+
         print!("Key: ");
         for _ in 0..decrypted.len() {
             print!("{:02x} ", cipher.next_byte());
@@ -258,7 +258,7 @@ fn run_server(port: u16) -> io::Result<()> {
         for _ in 0..cipher.state {
             encipher.next_byte();
         }
-        
+
         print!("Key: ");
         for _ in 0..message.len() {
             print!("{:02x} ", cipher.next_byte());
@@ -273,7 +273,10 @@ fn run_server(port: u16) -> io::Result<()> {
         println!();
         println!();
 
-        println!("[NETWORK] Sending encrypted message ({} bytes)...", encrypted.len());
+        println!(
+            "[NETWORK] Sending encrypted message ({} bytes)...",
+            encrypted.len()
+        );
         writer.write_all(&(encrypted.len() as u32).to_be_bytes())?;
         writer.write_all(&encrypted)?;
         writer.flush()?;
@@ -326,7 +329,7 @@ fn run_client(address: String) -> io::Result<()> {
         for _ in 0..cipher.state {
             encipher.next_byte();
         }
-        
+
         print!("Key: ");
         for _ in 0..message.len() {
             print!("{:02x} ", cipher.next_byte());
@@ -341,7 +344,10 @@ fn run_client(address: String) -> io::Result<()> {
         println!();
         println!();
 
-        println!("[NETWORK] Sending encrypted message ({} bytes)...", encrypted.len());
+        println!(
+            "[NETWORK] Sending encrypted message ({} bytes)...",
+            encrypted.len()
+        );
         writer.write_all(&(encrypted.len() as u32).to_be_bytes())?;
         writer.write_all(&encrypted)?;
         writer.flush()?;
@@ -374,7 +380,7 @@ fn run_client(address: String) -> io::Result<()> {
             decipher.next_byte();
         }
         let decrypted = decipher.decrypt(&encrypted);
-        
+
         print!("Key: ");
         for _ in 0..decrypted.len() {
             print!("{:02x} ", cipher.next_byte());

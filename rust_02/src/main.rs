@@ -30,8 +30,7 @@ struct Args {
 
 fn parse_offset(s: &str) -> Result<u64, String> {
     if s.starts_with("0x") || s.starts_with("0X") {
-        u64::from_str_radix(&s[2..], 16)
-            .map_err(|_| format!("Invalid hex offset: {}", s))
+        u64::from_str_radix(&s[2..], 16).map_err(|_| format!("Invalid hex offset: {}", s))
     } else {
         s.parse::<u64>()
             .map_err(|_| format!("Invalid decimal offset: {}", s))
@@ -40,7 +39,7 @@ fn parse_offset(s: &str) -> Result<u64, String> {
 
 fn hex_to_bytes(hex: &str) -> Option<Vec<u8>> {
     let hex = hex.trim();
-    if hex.len() % 2 != 0 {
+    if !hex.len().is_multiple_of(2) {
         return None;
     }
     (0..hex.len())
@@ -50,7 +49,7 @@ fn hex_to_bytes(hex: &str) -> Option<Vec<u8>> {
 }
 
 fn byte_to_ascii(byte: u8) -> char {
-    if byte >= 0x20 && byte <= 0x7E {
+    if (0x20..=0x7E).contains(&byte) {
         byte as char
     } else {
         '.'
@@ -71,11 +70,16 @@ fn main() -> io::Result<()> {
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(false)
             .open(&args.file)?;
         file.seek(SeekFrom::Start(args.offset))?;
         file.write_all(&data)?;
-        
-        println!("Writing {} bytes at offset 0x{:08x}", data.len(), args.offset);
+
+        println!(
+            "Writing {} bytes at offset 0x{:08x}",
+            data.len(),
+            args.offset
+        );
         print!("Hex: ");
         for (i, &b) in data.iter().enumerate() {
             if i > 0 {
@@ -86,7 +90,7 @@ fn main() -> io::Result<()> {
         println!();
         print!("ASCII: ");
         for &b in &data {
-                print!("{}", byte_to_ascii(b));
+            print!("{}", byte_to_ascii(b));
         }
         println!("\n✓ Successfully written");
         return Ok(());
@@ -99,7 +103,7 @@ fn main() -> io::Result<()> {
         file.seek(SeekFrom::Start(args.offset))?;
         let mut buf = vec![0u8; size];
         let n = file.read(&mut buf)?;
-        
+
         print!("{:08x}: ", args.offset);
         for (i, b) in buf[..n].iter().enumerate() {
             print!("{:02x} ", b);
@@ -113,7 +117,7 @@ fn main() -> io::Result<()> {
         }
         print!("|");
         for &b in &buf[..n] {
-                print!("{}", byte_to_ascii(b));
+            print!("{}", byte_to_ascii(b));
         }
         println!("|");
         return Ok(());

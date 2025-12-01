@@ -43,7 +43,10 @@ struct State {
 
 impl Ord for State {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.cost.cmp(&self.cost).then_with(|| self.position.cmp(&other.position))
+        other
+            .cost
+            .cmp(&self.cost)
+            .then_with(|| self.position.cmp(&other.position))
     }
 }
 
@@ -63,7 +66,11 @@ impl HexGrid {
     fn new(grid: Vec<Vec<u8>>) -> Self {
         let height = grid.len();
         let width = if height > 0 { grid[0].len() } else { 0 };
-        Self { grid, width, height }
+        Self {
+            grid,
+            width,
+            height,
+        }
     }
 
     fn generate(width: usize, height: usize) -> Self {
@@ -125,20 +132,31 @@ impl HexGrid {
         neighbors
     }
 
-    fn dijkstra(&self, start: (usize, usize), end: (usize, usize), animate: bool) -> Option<(Vec<(usize, usize)>, u32)> {
+    fn dijkstra(
+        &self,
+        start: (usize, usize),
+        end: (usize, usize),
+        animate: bool,
+    ) -> Option<(Vec<(usize, usize)>, u32)> {
         let mut heap = BinaryHeap::new();
         let mut dist: HashMap<(usize, usize), u32> = HashMap::new();
         let mut prev: HashMap<(usize, usize), (usize, usize)> = HashMap::new();
 
         dist.insert(start, 0);
-        heap.push(State { cost: 0, position: start });
+        heap.push(State {
+            cost: 0,
+            position: start,
+        });
 
         let mut step = 0;
 
         while let Some(State { cost, position }) = heap.pop() {
             if animate {
                 step += 1;
-                print!("\rStep {}: Exploring ({},{}) - cost: {}", step, position.0, position.1, cost);
+                print!(
+                    "\rStep {}: Exploring ({},{}) - cost: {}",
+                    step, position.0, position.1, cost
+                );
                 io::stdout().flush().ok();
                 thread::sleep(Duration::from_millis(50));
             }
@@ -175,7 +193,10 @@ impl HexGrid {
                 if next_cost < *dist.get(&neighbor).unwrap_or(&u32::MAX) {
                     dist.insert(neighbor, next_cost);
                     prev.insert(neighbor, position);
-                    heap.push(State { cost: next_cost, position: neighbor });
+                    heap.push(State {
+                        cost: next_cost,
+                        position: neighbor,
+                    });
                 }
             }
         }
@@ -200,10 +221,11 @@ impl HexGrid {
         let inverted = HexGrid::new(inverted_grid);
         let start = (0, 0);
         let end = (self.height - 1, self.width - 1);
-        
+
         if let Some((path, _inverted_cost)) = inverted.dijkstra(start, end, animate) {
             // Calculate actual cost from original grid
-            let actual_cost: u32 = path.iter()
+            let actual_cost: u32 = path
+                .iter()
                 .skip(1)
                 .map(|&(r, c)| self.grid[r][c] as u32)
                 .sum();
@@ -233,7 +255,7 @@ impl HexGrid {
 
         for (r, row) in self.grid.iter().enumerate() {
             for (c, &val) in row.iter().enumerate() {
-                if let Some(_) = path_set.get(&(r, c)) {
+                if path_set.contains_key(&(r, c)) {
                     // Path cells in bold white (for min path) or red (for max path)
                     if title.contains("MINIMUM") {
                         print!("\x1b[1;97m{:02X}\x1b[0m ", val);
@@ -257,7 +279,7 @@ impl HexGrid {
     fn position_to_color(row: usize, col: usize, height: usize, width: usize) -> String {
         let max_sum = (height - 1) + (width - 1);
         let diagonal_sum = row + col;
-        
+
         // Calculate progress from 0.0 to 1.0
         let t = if max_sum > 0 {
             diagonal_sum as f32 / max_sum as f32
@@ -267,7 +289,7 @@ impl HexGrid {
 
         // Map t to Hue (0 to 330 degrees) for Red -> Pink spectrum
         let hue = t * 330.0;
-        
+
         // HSV to RGB conversion (S=1.0, V=1.0)
         let c = 1.0;
         let x = c * (1.0 - ((hue / 60.0) % 2.0 - 1.0).abs());
@@ -327,8 +349,12 @@ fn main() -> io::Result<()> {
         let grid = HexGrid::from_file(map_file)?;
         println!("Grid size: {}x{}", grid.width, grid.height);
         println!("Start: (0,0) = 0x{:02X}", grid.grid[0][0]);
-        println!("End: ({},{}) = 0x{:02X}", grid.height - 1, grid.width - 1, 
-                 grid.grid[grid.height - 1][grid.width - 1]);
+        println!(
+            "End: ({},{}) = 0x{:02X}",
+            grid.height - 1,
+            grid.width - 1,
+            grid.grid[grid.height - 1][grid.width - 1]
+        );
         println!();
         grid
     } else {
