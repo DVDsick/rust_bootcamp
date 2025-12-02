@@ -1,29 +1,46 @@
-use clap::Parser;
 use std::collections::HashMap;
 use std::io::{self, Read};
+use std::env;
 
-/// Count word frequency in text
-#[derive(Parser, Debug)]
-#[command(name = "wordfreq")]
 struct Args {
-    /// Text to analyze (or use stdin if not provided)
     text: Vec<String>,
-
-    /// Show top N words
-    #[arg(long, default_value_t = 10)]
     top: usize,
-
-    /// Ignore words shorter than N
-    #[arg(long = "min-length", default_value_t = 1)]
     min_length: usize,
-
-    /// Case insensitive counting
-    #[arg(long)]
     ignore_case: bool,
 }
 
+fn parse_args() -> Args {
+    let mut text: Vec<String> = Vec::new();
+    let mut top: usize = 10;
+    let mut min_length: usize = 1;
+    let mut ignore_case = false;
+
+    let mut it = env::args().skip(1).peekable();
+    while let Some(arg) = it.next() {
+        match arg.as_str() {
+            "-h" | "--help" => {
+                println!("Count word frequency in text\n");
+                println!("Usage: rust_01 [OPTIONS] [TEXT...]\n");
+                println!("Arguments:\n  [TEXT...]            Text to analyze (or use stdin if not provided)\n");
+                println!("Options:\n      --top N           Show top N words [default: 10]\n      --min-length N    Ignore words shorter than N [default: 1]\n      --ignore-case     Case insensitive counting\n  -h, --help           Print help");
+                std::process::exit(0);
+            }
+            "--top" => {
+                if let Some(n) = it.next() { top = n.parse().unwrap_or(10); }
+            }
+            "--min-length" => {
+                if let Some(n) = it.next() { min_length = n.parse().unwrap_or(1); }
+            }
+            "--ignore-case" => ignore_case = true,
+            _ => text.push(arg),
+        }
+    }
+
+    Args { text, top, min_length, ignore_case }
+}
+
 fn main() {
-    let args = Args::parse();
+    let args = parse_args();
 
     // Get text from args or stdin
     let text = if args.text.is_empty() {

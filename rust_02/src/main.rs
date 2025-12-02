@@ -1,31 +1,54 @@
-use clap::Parser;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 
+use std::env;
+
 /// Hex Tool - Read & Write Binary Files
-#[derive(Parser, Debug)]
-#[command(name = "hextool")]
-#[command(about = "Read and write binary files in hexadecimal")]
 struct Args {
-    /// Target file
-    #[arg(short, long)]
     file: String,
-
-    /// Read mode (display hex)
-    #[arg(short, long)]
     read: bool,
-
-    /// Write mode (hex string to write)
-    #[arg(short, long)]
     write: Option<String>,
-
-    /// Offset in bytes (decimal or 0x hex)
-    #[arg(short, long, default_value = "0", value_parser = parse_offset)]
     offset: u64,
-
-    /// Number of bytes to read
-    #[arg(short, long)]
     size: Option<usize>,
+}
+
+fn print_help() {
+    println!("Hex Tool - Read & Write Binary Files\n");
+    println!("Usage: rust_02 --file <PATH> [--read | --write <HEX>] [--offset <N>] [--size <N>]\n");
+    println!("Options:\n  -f, --file PATH      Target file (required)\n      --read           Read mode (display hex)\n      --write HEX      Write mode (hex string to write)\n      --offset N       Offset in bytes (decimal or 0x hex) [default: 0]\n      --size N         Number of bytes to read\n  -h, --help           Print help");
+}
+
+fn parse_args() -> Result<Args, String> {
+    let mut file: Option<String> = None;
+    let mut read = false;
+    let mut write: Option<String> = None;
+    let mut offset: u64 = 0;
+    let mut size: Option<usize> = None;
+
+    let mut it = env::args().skip(1).peekable();
+    while let Some(arg) = it.next() {
+        match arg.as_str() {
+            "-h" | "--help" => {
+                print_help();
+                std::process::exit(0);
+            }
+            "-f" | "--file" => {
+                file = it.next();
+            }
+            "--read" => read = true,
+            "--write" => write = it.next(),
+            "--offset" => {
+                if let Some(v) = it.next() { offset = parse_offset(&v).map_err(|e| e)?; }
+            }
+            "--size" => {
+                if let Some(v) = it.next() { size = Some(v.parse().unwrap_or(16)); }
+            }
+            _ => return Err(format!("Unknown argument: {}", arg)),
+        }
+    }
+
+    let file = file.ok_or_else(|| "--file is required".to_string())?;
+    Ok(Args { file, read, write, offset, size })
 }
 
 fn parse_offset(s: &str) -> Result<u64, String> {
@@ -57,7 +80,10 @@ fn byte_to_ascii(byte: u8) -> char {
 }
 
 fn main() -> io::Result<()> {
-    let args = Args::parse();
+    let args = match parse_args() {
+        Ok(a) => a,
+        Err(e) => { eprintln!("{}", e); print_help(); std::process::exit(1); }
+    };
 
     // Write Mode
     if let Some(hexstr) = &args.write {

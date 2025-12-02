@@ -1,5 +1,4 @@
-use clap::Parser;
-use rand::Rng;
+use std::env;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::fs::File;
@@ -8,31 +7,46 @@ use std::thread;
 use std::time::Duration;
 
 /// Hex Grid Pathfinding - Dijkstra
-#[derive(Parser, Debug)]
-#[command(name = "hexpath")]
 struct Args {
-    /// Map file (hex values, space separated)
     map_file: Option<String>,
-
-    /// Generate random map (e.g., 8x4, 10x10)
-    #[arg(long)]
     generate: Option<String>,
-
-    /// Save generated map to file
-    #[arg(long)]
     output: Option<String>,
-
-    /// Show colored map
-    #[arg(long)]
     visualize: bool,
-
-    /// Show both min and max paths
-    #[arg(long)]
     both: bool,
-
-    /// Animate pathfinding
-    #[arg(long)]
     animate: bool,
+}
+
+fn print_help() {
+    println!("Hex Grid Pathfinding - Dijkstra\n");
+    println!("Usage: rust_04 [OPTIONS] [MAP_FILE]\n");
+    println!("Arguments:\n  [MAP_FILE]           Map file (hex values, space separated)\n");
+    println!("Options:\n      --generate WxH    Generate random map (e.g., 8x4, 10x10)\n      --output FILE     Save generated map to file\n      --visualize       Show colored map\n      --both            Show both min and max paths\n      --animate         Animate pathfinding\n  -h, --help           Print help");
+}
+
+fn parse_args() -> Args {
+    let mut map_file: Option<String> = None;
+    let mut generate: Option<String> = None;
+    let mut output: Option<String> = None;
+    let mut visualize = false;
+    let mut both = false;
+    let mut animate = false;
+
+    let mut it = env::args().skip(1).peekable();
+    while let Some(arg) = it.next() {
+        match arg.as_str() {
+            "-h" | "--help" => { print_help(); std::process::exit(0); }
+            "--generate" => generate = it.next(),
+            "--output" => output = it.next(),
+            "--visualize" => visualize = true,
+            "--both" => both = true,
+            "--animate" => animate = true,
+            _ => {
+                if map_file.is_none() { map_file = Some(arg); }
+            }
+        }
+    }
+
+    Args { map_file, generate, output, visualize, both, animate }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -74,9 +88,14 @@ impl HexGrid {
     }
 
     fn generate(width: usize, height: usize) -> Self {
-        let mut rng = rand::thread_rng();
+        // Simple LCG for std-only random numbers
+        let mut state: u64 = 0x9E37_79B9_7F4A_7C15 ^ ((width as u64) << 32 | height as u64);
+        let mut next_u8 = || {
+            state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+            (state >> 32) as u8
+        };
         let grid = (0..height)
-            .map(|_| (0..width).map(|_| rng.gen_range(0..=255)).collect())
+            .map(|_| (0..width).map(|_| next_u8()).collect())
             .collect();
         Self::new(grid)
     }
@@ -319,7 +338,7 @@ impl HexGrid {
 }
 
 fn main() -> io::Result<()> {
-    let args = Args::parse();
+    let args = parse_args();
 
     let grid = if let Some(size_str) = &args.generate {
         let parts: Vec<&str> = size_str.split('x').collect();
