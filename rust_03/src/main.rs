@@ -9,7 +9,7 @@ struct Args { command: Command }
 
 fn print_help() {
     println!("Stream cipher chat with Diffie-Hellman key generation\n");
-    println!("Usage: rust_03 <server PORT | client ADDRESS>\n");
+    println!("Usage: streamchat <server PORT | client ADDRESS>\n");
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -433,7 +433,7 @@ fn run_client(address: String) -> io::Result<()> {
 fn main() -> io::Result<()> {
     let args = match parse_args() {
         Ok(a) => a,
-        Err(e) => { eprintln!("{}", e); print_help(); std::process::exit(1); }
+        Err(_e) => { eprintln!("error"); print_help(); std::process::exit(2); }
     };
 
     match args.command {

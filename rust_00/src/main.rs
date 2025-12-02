@@ -3,7 +3,7 @@ use std::env;
 /// Print usage/help information
 fn print_help() {
     println!("Rusty Hello - CLI arguments et ownership\n");
-    println!("Usage: rust_00 [OPTIONS] [NAME]\n");
+    println!("Usage: hello [OPTIONS] [NAME]\n");
     println!("Arguments:");
     println!("  [NAME]              Name to greet [default: World]");
     println!("\nOptions:");
@@ -34,11 +34,12 @@ fn main() {
                 }
             }
             _ => {
-                // First positional argument is name
+                if arg.starts_with('-') {
+                    eprintln!("error");
+                    std::process::exit(2);
+                }
                 if name.is_none() {
                     name = Some(arg);
-                } else {
-                    // Extra positional args are ignored
                 }
             }
         }

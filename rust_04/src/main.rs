@@ -18,7 +18,7 @@ struct Args {
 
 fn print_help() {
     println!("Hex Grid Pathfinding - Dijkstra\n");
-    println!("Usage: rust_04 [OPTIONS] [MAP_FILE]\n");
+    println!("Usage: hexpath [OPTIONS] [MAP_FILE]\n");
     println!("Arguments:\n  [MAP_FILE]           Map file (hex values, space separated)\n");
     println!("Options:\n      --generate WxH    Generate random map (e.g., 8x4, 10x10)\n      --output FILE     Save generated map to file\n      --visualize       Show colored map\n      --both            Show both min and max paths\n      --animate         Animate pathfinding\n  -h, --help           Print help");
 }
@@ -41,6 +41,10 @@ fn parse_args() -> Args {
             "--both" => both = true,
             "--animate" => animate = true,
             _ => {
+                if arg.starts_with('-') {
+                    eprintln!("error");
+                    std::process::exit(2);
+                }
                 if map_file.is_none() { map_file = Some(arg); }
             }
         }

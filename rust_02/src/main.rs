@@ -14,7 +14,7 @@ struct Args {
 
 fn print_help() {
     println!("Hex Tool - Read & Write Binary Files\n");
-    println!("Usage: rust_02 --file <PATH> [--read | --write <HEX>] [--offset <N>] [--size <N>]\n");
+    println!("Usage: hextool --file <PATH> [--read | --write <HEX>] [--offset <N>] [--size <N>]\n");
     println!("Options:\n  -f, --file PATH      Target file (required)\n      --read           Read mode (display hex)\n      --write HEX      Write mode (hex string to write)\n      --offset N       Offset in bytes (decimal or 0x hex) [default: 0]\n      --size N         Number of bytes to read\n  -h, --help           Print help");
 }
 
@@ -35,15 +35,18 @@ fn parse_args() -> Result<Args, String> {
             "-f" | "--file" => {
                 file = it.next();
             }
-            "--read" => read = true,
-            "--write" => write = it.next(),
-            "--offset" => {
-                if let Some(v) = it.next() { offset = parse_offset(&v).map_err(|e| e)?; }
+            "-r" | "--read" => read = true,
+            "-w" | "--write" => write = it.next(),
+            "-o" | "--offset" => {
+                if let Some(v) = it.next() { offset = parse_offset(&v)?; }
             }
-            "--size" => {
+            "-s" | "--size" => {
                 if let Some(v) = it.next() { size = Some(v.parse().unwrap_or(16)); }
             }
-            _ => return Err(format!("Unknown argument: {}", arg)),
+            _ => {
+                eprintln!("error");
+                std::process::exit(2);
+            }
         }
     }
 
@@ -82,7 +85,7 @@ fn byte_to_ascii(byte: u8) -> char {
 fn main() -> io::Result<()> {
     let args = match parse_args() {
         Ok(a) => a,
-        Err(e) => { eprintln!("{}", e); print_help(); std::process::exit(1); }
+        Err(e) => { eprintln!("{}", e); print_help(); std::process::exit(2); }
     };
 
     // Write Mode
