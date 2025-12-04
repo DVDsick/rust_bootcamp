@@ -106,14 +106,20 @@ impl HexGrid {
     }
 
     fn generate(width: usize, height: usize) -> Self {
-        // Simple LCG for std-only random numbers
-        let mut state: u64 = 0x9E37_79B9_7F4A_7C15 ^ ((width as u64) << 32 | height as u64);
-        let mut next_u8 = || {
-            state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
-            (state >> 32) as u8
-        };
+        // Generate gradient from 0x00 (top-left) to 0xFF (bottom-right)
+        let max_distance = ((width - 1) as f64).hypot((height - 1) as f64);
         let grid = (0..height)
-            .map(|_| (0..width).map(|_| next_u8()).collect())
+            .map(|row| {
+                (0..width)
+                    .map(|col| {
+                        // Calculate distance from top-left corner
+                        let distance = (col as f64).hypot(row as f64);
+                        // Normalize to 0-255 range
+                        let normalized = (distance / max_distance) * 255.0;
+                        normalized as u8
+                    })
+                    .collect()
+            })
             .collect();
         Self::new(grid)
     }
@@ -178,6 +184,7 @@ impl HexGrid {
         let mut heap = BinaryHeap::new();
         let mut dist: HashMap<(usize, usize), u32> = HashMap::new();
         let mut prev: HashMap<(usize, usize), (usize, usize)> = HashMap::new();
+        let mut step = 0;
 
         dist.insert(start, 0);
         heap.push(State {
@@ -185,23 +192,8 @@ impl HexGrid {
             position: start,
         });
 
-        let mut step = 0;
-
         while let Some(State { cost, position }) = heap.pop() {
-            if animate {
-                step += 1;
-                print!(
-                    "\rStep {}: Exploring ({},{}) - cost: {}",
-                    step, position.0, position.1, cost
-                );
-                io::stdout().flush().ok();
-                thread::sleep(Duration::from_millis(50));
-            }
-
             if position == end {
-                if animate {
-                    println!();
-                }
                 let mut path = Vec::new();
                 let mut current = end;
                 path.push(current);
@@ -216,11 +208,82 @@ impl HexGrid {
                 }
 
                 path.reverse();
+
+                if animate {
+                    println!("\n=== PATH FOUND ===\n");
+                    thread::sleep(Duration::from_millis(500));
+
+                    for (idx, pos) in path.iter().enumerate() {
+                        println!(
+                            "Step {}: ({},{}) - cost: {}",
+                            idx + 1,
+                            pos.0,
+                            pos.1,
+                            cost
+                        );
+
+                        for row in 0..self.height {
+                            for col in 0..self.width {
+                                if path[..=idx].contains(&(row, col)) {
+                                    if (row, col) == *pos {
+                                        print!("[*]");
+                                    } else {
+                                        print!("[✓]");
+                                    }
+                                } else {
+                                    print!("[ ]");
+                                }
+                            }
+                            println!();
+                        }
+                        println!();
+
+                        thread::sleep(Duration::from_millis(300));
+                    }
+                }
+
                 return Some((path, cost));
             }
 
             if cost > *dist.get(&position).unwrap_or(&u32::MAX) {
                 continue;
+            }
+
+            if animate {
+                step += 1;
+                println!("Step {}: Exploring ({},{}) - cost: {}", step, position.0, position.1, cost);
+                
+                // Reconstruct current path from start to position
+                let mut current_path = Vec::new();
+                let mut current = position;
+                current_path.push(current);
+                
+                while current != start {
+                    if let Some(&p) = prev.get(&current) {
+                        current_path.push(p);
+                        current = p;
+                    } else {
+                        break;
+                    }
+                }
+                current_path.reverse();
+                
+                for row in 0..self.height {
+                    for col in 0..self.width {
+                        if current_path.contains(&(row, col)) {
+                            if (row, col) == position {
+                                print!("[*]");
+                            } else {
+                                print!("[✓]");
+                            }
+                        } else {
+                            print!("[ ]");
+                        }
+                    }
+                    println!();
+                }
+                println!();
+                thread::sleep(Duration::from_millis(100));
             }
 
             for neighbor in self.get_neighbors(position) {
