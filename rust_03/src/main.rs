@@ -3,9 +3,14 @@ use std::net::{TcpListener, TcpStream};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Stream cipher chat with Diffie-Hellman key generation
-enum Command { Server(u16), Client(String) }
+enum Command {
+    Server(u16),
+    Client(String),
+}
 
-struct Args { command: Command }
+struct Args {
+    command: Command,
+}
 
 fn print_help() {
     println!("Stream cipher chat with Diffie-Hellman key generation\n");
@@ -22,13 +27,20 @@ fn parse_args() -> Result<Args, String> {
                     .ok_or("server requires PORT")?
                     .parse()
                     .map_err(|_| "invalid PORT".to_string())?;
-                Ok(Args { command: Command::Server(port) })
+                Ok(Args {
+                    command: Command::Server(port),
+                })
             }
             "client" => {
                 let addr = it.next().ok_or("client requires ADDRESS")?;
-                Ok(Args { command: Command::Client(addr) })
+                Ok(Args {
+                    command: Command::Client(addr),
+                })
             }
-            "-h" | "--help" => { print_help(); std::process::exit(0); }
+            "-h" | "--help" => {
+                print_help();
+                std::process::exit(0);
+            }
             _ => Err("expected 'server PORT' or 'client ADDRESS'".to_string()),
         }
     } else {
@@ -101,10 +113,17 @@ fn perform_dh_exchange(stream: &mut TcpStream, is_server: bool) -> io::Result<u6
 
     // Generate random private key
     // Simple std-only pseudo-random using time-based seed and xorshift64*
-    let seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+    let seed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u64;
     let mut x = seed | 1; // ensure non-zero odd
     // advance a few rounds
-    for _ in 0..5 { x ^= x >> 12; x ^= x << 25; x ^= x >> 27; }
+    for _ in 0..5 {
+        x ^= x >> 12;
+        x ^= x << 25;
+        x ^= x >> 27;
+    }
     let private_key: u64 = 2 + (x % (P - 3));
     println!("[DH] Generating our keypair...");
     println!("private_key = {:X} (random 64-bit)", private_key);
@@ -433,7 +452,11 @@ fn run_client(address: String) -> io::Result<()> {
 fn main() -> io::Result<()> {
     let args = match parse_args() {
         Ok(a) => a,
-        Err(_e) => { eprintln!("error"); print_help(); std::process::exit(2); }
+        Err(_e) => {
+            eprintln!("error");
+            print_help();
+            std::process::exit(2);
+        }
     };
 
     match args.command {

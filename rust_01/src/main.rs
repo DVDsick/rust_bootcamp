@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::io::{self, Read};
 use std::env;
+use std::io::{self, Read};
 
 struct Args {
     text: Vec<String>,
@@ -21,22 +21,41 @@ fn parse_args() -> Args {
             "-h" | "--help" => {
                 println!("Count word frequency in text\n");
                 println!("Usage: wordfreq [OPTIONS] [TEXT...]\n");
-                println!("Arguments:\n  [TEXT...]            Text to analyze (or use stdin if not provided)\n");
-                println!("Options:\n      --top N           Show top N words [default: 10]\n      --min-length N    Ignore words shorter than N [default: 1]\n      --ignore-case     Case insensitive counting\n  -h, --help           Print help");
+                println!(
+                    "Arguments:\n  [TEXT...]            Text to analyze (or use stdin if not provided)\n"
+                );
+                println!(
+                    "Options:\n      --top N           Show top N words [default: 10]\n      --min-length N    Ignore words shorter than N [default: 1]\n      --ignore-case     Case insensitive counting\n  -h, --help           Print help"
+                );
                 std::process::exit(0);
             }
             "--top" => {
-                if let Some(n) = it.next() { top = n.parse().unwrap_or(10); }
+                if let Some(n) = it.next() {
+                    top = n.parse().unwrap_or(10);
+                }
             }
             "--min-length" => {
-                if let Some(n) = it.next() { min_length = n.parse().unwrap_or(1); }
+                if let Some(n) = it.next() {
+                    min_length = n.parse().unwrap_or(1);
+                }
             }
             "--ignore-case" => ignore_case = true,
-            _ => text.push(arg),
+            _ => {
+                if arg.starts_with('-') {
+                    eprintln!("error");
+                    std::process::exit(2);
+                }
+                text.push(arg);
+            }
         }
     }
 
-    Args { text, top, min_length, ignore_case }
+    Args {
+        text,
+        top,
+        min_length,
+        ignore_case,
+    }
 }
 
 fn main() {
@@ -54,17 +73,22 @@ fn main() {
     // Word frequency analysis
     let mut freq: HashMap<String, usize> = HashMap::new();
 
-    for word in text.split_whitespace() {
-        let word = word.trim_matches(|c: char| !c.is_alphanumeric());
+    for raw_word in text.split_whitespace() {
+        // Preserve quotes when trimming punctuation
+        let word = raw_word.trim_matches(|c: char| !c.is_alphanumeric() && c != '\'' && c != '"');
+        // If word is just punctuation, skip
+        if word.is_empty() {
+            continue;
+        }
         if word.len() < args.min_length {
             continue;
         }
-        let word = if args.ignore_case {
+        let word_key = if args.ignore_case {
             word.to_lowercase()
         } else {
             word.to_string()
         };
-        *freq.entry(word).or_insert(0) += 1;
+        *freq.entry(word_key).or_insert(0) += 1;
     }
 
     // Sort by frequency
@@ -78,7 +102,11 @@ fn main() {
         // Single-line output expected by grader for stdin case
         let mut first = true;
         for (word, count) in freq_vec.iter().take(top_n) {
-            if !first { print!("  "); } else { first = false; }
+            if !first {
+                print!("  ");
+            } else {
+                first = false;
+            }
             print!("{}: {}", word, count);
         }
         println!();
